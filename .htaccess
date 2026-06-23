@@ -1,0 +1,29 @@
+# WildTrail Lanka - Security & Configuration
+
+# Hide PHP errors in production (show blank page instead of errors)
+php_flag display_errors off
+
+# Prevent directory listing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Disable access to db.php directly
+<Files "db.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Custom 404 error page
+ErrorDocument 404 /wildtrail/404.php
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Redirect HTTP to HTTPS (uncomment when you have SSL)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
