@@ -431,14 +431,8 @@ try {
                         </select>
                     </div>
                     
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Status</label>
-                        <select class="form-select" name="status">
-                            <option value="available" <?php echo ($editVehicle && $editVehicle['status'] == 'available') ? 'selected' : ''; ?>>Available</option>
-                            <option value="booked" <?php echo ($editVehicle && $editVehicle['status'] == 'booked') ? 'selected' : ''; ?>>Booked</option>
-                            <option value="maintenance" <?php echo ($editVehicle && $editVehicle['status'] == 'maintenance') ? 'selected' : ''; ?>>Maintenance</option>
-                        </select>
-                    </div>
+                    <!-- Status is managed internally; keep hidden input to preserve current value -->
+                    <input type="hidden" name="status" value="<?php echo $editVehicle ? htmlspecialchars($editVehicle['status']) : 'available'; ?>">
                 </div>
                 
                 <div class="mt-3">
@@ -469,14 +463,13 @@ try {
                             <th>Plate Number</th>
                             <th>Capacity</th>
                             <th>Driver</th>
-                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($vehicles)): ?>
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-5">
+                            <td colspan="7" class="text-center text-muted py-5">
                                 <i class="bi bi-truck" style="font-size: 48px;"></i>
                                 <p class="mt-3">No vehicles added yet. Add your first vehicle above!</p>
                             </td>
@@ -499,11 +492,7 @@ try {
                             <td>
                                 <?php echo $vehicle['driver_name'] ? htmlspecialchars($vehicle['driver_name']) : '<span class="text-muted">Not assigned</span>'; ?>
                             </td>
-                            <td>
-                                <span class="status-badge status-<?php echo $vehicle['status']; ?>">
-                                    <?php echo ucfirst($vehicle['status']); ?>
-                                </span>
-                            </td>
+                            <!-- Status column removed from UI -->
                             <td>
                                 <a href="vehicles.php?edit=<?php echo $vehicle['id']; ?>" class="btn btn-sm btn-primary btn-action">
                                     <i class="bi bi-pencil"></i> Edit

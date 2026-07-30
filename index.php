@@ -2,19 +2,13 @@
 // index.php - Visitor Home Page / Dashboard
 require_once 'db.php';
 
-// Check if user is logged in, if not redirect to login
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
-}
-
-// Get user info
+// Populate user info if available; allow public (not-logged-in) visitors to view the main page
 $userName = $_SESSION['user_name'] ?? 'Visitor';
 $userRole = $_SESSION['user_role'] ?? 'visitor';
 
-// Only visitors should see this page (admins go to admin dashboard)
-if ($userRole !== 'visitor') {
-    header('Location: login.php');
+// If an admin/staff is logged in, send them to their dashboard
+if (isset($_SESSION['user_id']) && $userRole !== 'visitor') {
+    header('Location: admin/dashboard.php');
     exit;
 }
 
@@ -23,23 +17,29 @@ try {
     // Count total parks
     $parksCount = $pdo->query("SELECT COUNT(*) FROM parks WHERE status = 'active'")->fetchColumn();
     
-    // Count user's bookings
-    $bookingsStmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE visitor_id = ?");
-    $bookingsStmt->execute([$_SESSION['user_id']]);
-    $myBookings = $bookingsStmt->fetchColumn();
-    
-    // Get recent bookings
-    $recentStmt = $pdo->prepare("
-        SELECT b.*, p.park_name, v.vehicle_name 
-        FROM bookings b 
-        LEFT JOIN parks p ON b.park_id = p.id 
-        LEFT JOIN vehicles v ON b.vehicle_id = v.id 
-        WHERE b.visitor_id = ? 
-        ORDER BY b.created_at DESC 
-        LIMIT 5
-    ");
-    $recentStmt->execute([$_SESSION['user_id']]);
-    $recentBookings = $recentStmt->fetchAll();
+    // If a visitor is logged in, fetch their bookings; otherwise defaults
+    if (isset($_SESSION['user_id'])) {
+        // Count user's bookings
+        $bookingsStmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE visitor_id = ?");
+        $bookingsStmt->execute([$_SESSION['user_id']]);
+        $myBookings = $bookingsStmt->fetchColumn();
+        
+        // Get recent bookings
+        $recentStmt = $pdo->prepare("\
+            SELECT b.*, p.park_name, v.vehicle_name \
+            FROM bookings b \
+            LEFT JOIN parks p ON b.park_id = p.id \
+            LEFT JOIN vehicles v ON b.vehicle_id = v.id \
+            WHERE b.visitor_id = ? \
+            ORDER BY b.created_at DESC \
+            LIMIT 5
+        ");
+        $recentStmt->execute([$_SESSION['user_id']]);
+        $recentBookings = $recentStmt->fetchAll();
+    } else {
+        $myBookings = 0;
+        $recentBookings = [];
+    }
     
 } catch (PDOException $e) {
     $parksCount = 0;
@@ -242,114 +242,7 @@ try {
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <div class="hero-section">
-        <div class="container text-center">
-            <h1 class="display-4 mb-3">Welcome back, <?php echo htmlspecialchars($userName); ?>! 🦁</h1>
-            <p class="welcome-text">Ready for your next wild adventure in Sri Lanka?</p>
-        </div>
-    </div>
-
-    <div class="container">
-        <!-- Statistics Row -->
-        <div class="row mb-5">
-            <div class="col-md-4 mb-4">
-                <div class="stats-card text-center">
-                    <div class="stats-icon"><i class="bi bi-tree"></i></div>
-                    <div class="stats-number"><?php echo $parksCount; ?></div>
-                    <div class="stats-label">National Parks Available</div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="stats-card text-center">
-                    <div class="stats-icon"><i class="bi bi-ticket-perforated"></i></div>
-                    <div class="stats-number"><?php echo $myBookings; ?></div>
-                    <div class="stats-label">My Bookings</div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="stats-card text-center">
-                    <div class="stats-icon"><i class="bi bi-star"></i></div>
-                    <div class="stats-number">4.8</div>
-                    <div class="stats-label">Average Rating</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <h3 class="mb-4 text-center" style="color: var(--dark-green); font-weight: bold;">
-            <i class="bi bi-lightning"></i> Quick Actions
-        </h3>
-        <div class="row mb-5">
-            <div class="col-md-4 mb-4">
-                <a href="book_ticket.php" class="action-card">
-                    <div class="action-icon"><i class="bi bi-ticket-perforated"></i></div>
-                    <div class="action-title">Book a Safari</div>
-                    <div class="action-desc">Reserve your spot at Sri Lanka's best national parks</div>
-                </a>
-            </div>
-            <div class="col-md-4 mb-4">
-                <a href="my_bookings.php" class="action-card">
-                    <div class="action-icon"><i class="bi bi-calendar-check"></i></div>
-                    <div class="action-title">View My Bookings</div>
-                    <div class="action-desc">Check status and manage your upcoming trips</div>
-                </a>
-            </div>
-            <div class="col-md-4 mb-4">
-                <a href="parks.php" class="action-card">
-                    <div class="action-icon"><i class="bi bi-map"></i></div>
-                    <div class="action-title">Explore Parks</div>
-                    <div class="action-desc">Discover wildlife and park information</div>
-                </a>
-            </div>
-        </div>
-
-        <!-- Recent Bookings -->
-        <div class="booking-table mb-5">
-            <div class="table-header">
-                <i class="bi bi-clock-history"></i> Recent Bookings
-            </div>
-            <div class="p-4">
-                <?php if (empty($recentBookings)): ?>
-                    <div class="text-center text-muted py-4">
-                        <i class="bi bi-inbox" style="font-size: 48px;"></i>
-                        <p class="mt-3">No bookings yet. <a href="book_ticket.php" style="color: var(--primary-green); font-weight: bold;">Book your first safari!</a></p>
-                    </div>
-                <?php else: ?>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Park</th>
-                                    <th>Vehicle</th>
-                                    <th>Date</th>
-                                    <th>Visitors</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($recentBookings as $booking): ?>
-                                <tr>
-                                    <td><strong><?php echo htmlspecialchars($booking['park_name'] ?? 'N/A'); ?></strong></td>
-                                    <td><?php echo htmlspecialchars($booking['vehicle_name'] ?? 'Not assigned'); ?></td>
-                                    <td><?php echo date('M d, Y', strtotime($booking['entry_date'])); ?></td>
-                                    <td><?php echo $booking['visitors_count']; ?></td>
-                                    <td>Rs. <?php echo number_format($booking['total_amount'], 2); ?></td>
-                                    <td>
-                                        <span class="status-badge status-<?php echo $booking['status']; ?>">
-                                            <?php echo ucfirst($booking['status']); ?>
-                                        </span>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
+    <?php include 'details.php'; ?>
 
     <!-- Footer -->
     <footer class="footer">
